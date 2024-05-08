@@ -35,4 +35,4 @@ python -m pylint echofeed \
   --init-hook="import sys; sys.path.append('$SCRIPT_PATH')" \
   --rcfile=.pylintrc
 
-python -m pytest --disable-warnings --no-warn-script-locationS
+python -m pytest --disable-warnings

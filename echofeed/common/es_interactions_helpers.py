@@ -96,63 +96,30 @@ def delete_entity(entity_type: str, entity_id: str) -> dict:
     """
     Removes an entity instance from the database.
     """
-    entity_index = EsIndexes.INDEXES[entity_type]
     response = {
-        "message": f"Successfully deleted {entity_type} from the database",
+        "message": f"Successfully removed {entity_type} from the database",
         "code": 200,
         "result": True
     }
+
     try:
         es_client = get_elasticsearch_client()
-        es_client.delete(index=entity_index, id=entity_id)
+        es_client.delete(
+            index=EsIndexes.INDEXES[entity_type],
+            id=entity_id
+        )
         logger.info(f"Deleted {entity_type} from the database")
 
     except Exception as exception:
         exception_message = (
-            f"Encountered an exception when trying to delete"
-            f" {entity_type} from the database: {exception}"
+            f"Encountered exception when tried to"
+            f" remove {entity_type} from the database: {exception}"
         )
-        logger.error(exception_message)
-        response.update({
+        response = {
             "message": exception_message,
             "code": 424,
             "result": False
-        })
-
-    return response
-
-
-def search_entity(entity_type: str, search_query: dict) -> dict:
-    """
-    Searches for entity instances in the database.
-    """
-    entity_index = EsIndexes.INDEXES[entity_type]
-    response = {
-        "message": f"Successfully retrieved {entity_type} from the database",
-        "code": 200,
-        "result": True,
-        f"{entity_type}s": []
-    }
-    try:
-        es_client = get_elasticsearch_client()
-        search_results = es_client.search(
-            index=entity_index,
-            body=search_query)
-        response[f"{entity_type}s"] = search_results["hits"]["hits"]
-        logger.info(f"Retrieved {entity_type} from the database:"
-                    f" {search_results}")
-
-    except Exception as exception:
-        exception_message = (
-            f"Encountered an exception when trying to retrieve"
-            f" {entity_type} from the database: {exception}"
-        )
-        logger.error(exception_message)
-        response.update({
-            "message": exception_message,
-            "code": 424,
-            "result": False
-        })
+        }
 
     return response
 
@@ -161,29 +128,31 @@ def get_entity(entity_type: str, entity_id: str) -> dict:
     """
     Retrieves an entity instance from the database.
     """
-    entity_index = EsIndexes.INDEXES[entity_type]
     response = {
         "message": f"Successfully retrieved {entity_type} from the database",
         "code": 200,
         "result": True,
         f"{entity_type}_info": None
     }
+
     try:
         es_client = get_elasticsearch_client()
-        entity = es_client.get(index=entity_index, id=entity_id)
-        response[f"{entity_type}_info"] = entity["_source"]
-        logger.info(f"Retrieved {entity_type} from the database: "
-                    f"{response[f'{entity_type}_info']}")
+        entity = es_client.get(
+            index=EsIndexes.INDEXES[entity_type],
+            id=entity_id
+        )
+        response[f"{entity_type}_info"] = entity.body["_source"]
+        logger.info(f"Retrieved entity from the database:"
+                    f" {response[f'{entity_type}_info']}")
 
     except Exception as exception:
         exception_message = (
-            f"Encountered an exception when trying to retrieve"
+            f"Encountered exception when tried to retrieve"
             f" {entity_type} from the database: {exception}"
         )
-        logger.error(exception_message)
         response.update({
             "message": exception_message,
-            "code": 424,
+            "code": 404,
             "result": False
         })
 

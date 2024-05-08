@@ -10,6 +10,7 @@ RUN pip3 install -r api/requirements.txt
 
 COPY echofeed/common ./common
 COPY echofeed/api ./api
+COPY echofeed/tests ./tests
 
 EXPOSE 8080
 

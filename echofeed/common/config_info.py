@@ -13,8 +13,8 @@ API_URL = f"http://127.0.0.1:{API_PORT}"
 
 UI_PORT = 8081
 
-OPENAI_API_KEY = 'sk-proj-sRJ1HoG2ixQllawPohkPT3BlbkFJYR1TEmY1vmRaQsk6SDZQ'
-GOOGLE_API_KEY = 'AIzaSyBHiYY-Dvpdbr1Yc18-8UiozxgP8fSroO8'
+OPENAI_API_KEY = 'your_openai_api_key'
+GOOGLE_API_KEY = 'your_google_api_key'
 GOOGLE_ENGINE_ID = '11530c2a1693b4f75'
 GOOGLE_SEARCH_URL = 'https://www.googleapis.com/customsearch/v1'
 

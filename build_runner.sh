@@ -16,6 +16,7 @@ start_service () {
 }
 
 start_service api 8080
+start_service ui 8081
 
 
 # Elasticsearch
@@ -26,7 +27,7 @@ else
 fi
 
 
-# Testing
+ # Testing
 set -x
 
 SCRIPT_PATH=$(dirname "$0")

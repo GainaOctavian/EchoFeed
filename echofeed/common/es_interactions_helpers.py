@@ -1,6 +1,9 @@
 """
 A module that contains helper functions for interacting with Elasticsearch.
 """
+import uuid
+from typing import Optional
+
 import requests
 from elasticsearch import Elasticsearch
 
@@ -10,20 +13,33 @@ from echofeed.common.config_info import ElasticsearchIndexes as EsIndexes
 logger = config_info.get_logger()
 
 
-def get_elasticsearch_client() -> Elasticsearch:
+def get_elasticsearch_client() -> Optional[Elasticsearch]:
     """
     Generates an Elasticsearch client with
     information from the configuration module.
     """
-    es_client = Elasticsearch(config_info.ELASTICSEARCH_URL)
-    logger.info("Generated Elasticsearch client")
+    try:
+        es_client = Elasticsearch(config_info.ELASTICSEARCH_URL)
+        logger.info("Generated Elasticsearch client")
+    except Exception as exception:
+        logger.error(f"Encountered exception when tried to generate"
+                     f" Elasticsearch client: {exception}")
+        es_client = None
     return es_client
 
 
-def create_entity(entity_type: str, entity_info: dict) -> dict:
+def create_entity(entity_type: str,
+                  entity_info: dict,
+                  entity_id: str = None) -> Optional[str]:
     """
     Adds a new entity instance to the database.
     """
+    if entity_id is None:
+        if entity_type == config_info.Entity.USER:
+            entity_id = entity_info["username"]
+        else:
+            entity_id = entity_info["title"]
+
     entity_index = EsIndexes.INDEXES[entity_type]
     response = {
         "message": f"Successfully added {entity_type} into the database",
@@ -35,7 +51,9 @@ def create_entity(entity_type: str, entity_info: dict) -> dict:
         es_client = get_elasticsearch_client()
         new_entity = es_client.index(
             index=entity_index,
-            document=entity_info
+            id=entity_id,
+            document=entity_info,
+            op_type="create"
         )
         new_entity_dict = dict(new_entity)
         response[f"{entity_type}_id"] = new_entity_dict["_id"]
@@ -175,7 +193,7 @@ def get_all_entities(entity_type: str) -> dict:
         response[f"{EsIndexes.INDEXES[entity_type]}_info"] = None
         entities_list = requests.get(
             url=f"{config_info.ELASTICSEARCH_URL}"
-                f"/{EsIndexes.INDEXES[entity_type]}/_search?pretty"
+                f"/{EsIndexes.INDEXES[entity_type]}/_search?pretty&size=10000"
         ).json()["hits"]["hits"]
 
         response[f"{EsIndexes.INDEXES[entity_type]}_info"] = []

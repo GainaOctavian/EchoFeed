@@ -1,11 +1,12 @@
 """File containing helper functions for the endpoints of the API service."""
 from typing import List
 
-from echofeed.common import config_info
+from echofeed.common import config_info, api_request_classes as api_req_cls
 from echofeed.common.config_info import Entity
 from echofeed.common.config_info import ElasticsearchIndexes as esIndexes
 from echofeed.common import es_interactions_helpers as es_helpers
-from echofeed.api import api_request_classes as api_req_cls
+from echofeed.api import api_google_search as api_search, api_gpt_interactions as api_gpt
+from echofeed.common import api_classes as api_cls
 
 logger = config_info.get_logger()
 
@@ -19,6 +20,8 @@ def create_article(request: api_req_cls.CreateArticleRequest) -> dict:
             article_info(dict):
                 title (str): The title of the article.
                 content (str): The content of the article.
+                url (str): The url of the article.
+                date(str): The date of the article.
                 keywords(List[str]): The keywords of the article.
 
     Returns:
@@ -44,6 +47,7 @@ def create_user(request: api_req_cls.CreateUserRequest) -> dict:
     Args:
         request (dict):
             user_info(dict):
+                username (str): The username of the user.
                 last_name (str): The last name of the user.
                 first_name (str): The first name of the user.
                 birthday(str): The birthday of the user.
@@ -52,6 +56,7 @@ def create_user(request: api_req_cls.CreateUserRequest) -> dict:
                 viewed_articles(List[str]): The viewed articles of the user.
                 liked_articles(List[str]): The liked articles of the user.
                 is_admin(bool): The admin status of the user.
+                password(str): The password of the user.
 
     Returns:
         message(str): a message that contains information about
@@ -59,8 +64,10 @@ def create_user(request: api_req_cls.CreateUserRequest) -> dict:
         code(int): the result code of the operation.
         result(bool): the result of the operation.
         user_id(str): the id of the user, if the operation was
-                      successful.(???)
+                      successful.
     """
+    request.user_info.password = config_info.hash_password(request.user_info.password)
+
     response = es_helpers.create_entity(
         entity_type=Entity.USER,
         entity_info=request.user_info.model_dump()
@@ -78,6 +85,8 @@ def update_article(request: api_req_cls.UpdateArticleRequest) -> dict:
             article_info(dict):
                 title (str): The title of the article.
                 content (str): The content of the article.
+                url (str): The url of the article.
+                date(str): The date of the article.
                 keywords(List[str]): The keywords of the article.
 
     Returns:
@@ -102,6 +111,7 @@ def update_user(request: api_req_cls.UpdateUserRequest) -> dict:
     Args:
         request (dict):
             user_info(dict):
+                username (str): The username of the user.
                 last_name (str): The last name of the user.
                 first_name (str): The first name of the user.
                 birthday(str): The birthday of the user.
@@ -210,7 +220,17 @@ def get_user(user_id: str) -> dict:
         entity_type=Entity.USER,
         entity_id=user_id
     )
+    if not response or not response.get('user_info'):
+        return {
+            "message": f"User with id {user_id} not found",
+            "code": 404,
+            "result": False,
+            "user_info": None
+        }
+
     logger.info(f"Retrieved user: {response}")
+    logger.info(
+        f"Hashed password: {response.get('user_info', {}).get('password', 'N/A')}")
     return response
 
 
@@ -335,3 +355,108 @@ def get_all_articles() -> dict:
     response = es_helpers.get_all_entities(entity_type=Entity.ARTICLE)
     logger.info(f"Retrieved articles: {response}")
     return response
+
+
+def login(username: str, password: str) -> dict:
+    try:
+        print(f"Received password before hashing: {password}")  # for logging
+        response = get_user(username)
+        user = response.get('user_info', None)
+
+        if user:
+            stored_password = user['password']
+            print(f"Stored password: {stored_password}")  # for logging
+            if config_info.check_password(password, stored_password):
+                return {
+                    "user_info": user,
+                    "message": "Login successful",
+                    "code": 200,
+                    "result": True
+                }
+            else:
+                return {
+                    "message": "Invalid password",
+                    "code": 401,
+                    "result": False
+                }
+        else:
+            return {
+                "message": "User doesn't exist(invalid username)",
+                "code": 401,
+                "result": False
+            }
+    except Exception as e:
+        return {
+            "message": f"Error during login: {e}",
+            "code": 500,
+            "result": False
+        }
+
+
+def handle_article_search(
+        important_keywords: List[str], relevant_keywords: List[str],
+        irrelevant_keywords: List[str], langauge: str, min_keywords: int,
+        num_articles: int, date: str):
+    """
+    Handles the search for articles based on the given keywords.
+    """
+    query = api_gpt.extract_queries(important_keywords, relevant_keywords, irrelevant_keywords, langauge, min_keywords)
+
+    keywords = important_keywords + relevant_keywords
+    query = f"{query} after:{date}"
+
+    articles = api_search.create_articles_from_search(query, keywords, num_articles)
+    articles_dict = [article.dict() for article in articles]
+    response = {
+        "message": "Successfully created articles from search",
+        "code": 200,
+        "result": True,
+        "articles": articles_dict
+    }
+    return response
+
+
+def handle_recommandation_search(keywords: List[str], language: str, date:str):
+    """
+    Handles the recommandation of articles based on the given keywords.
+    """
+    query = api_gpt.extract_recommandation_queries(keywords, language)
+    query = f"{query} after:{date}"
+    articles = api_search.create_articles_from_search(query, keywords)
+    articles_dict = [article.dict() for article in articles]
+    response = {
+        "message": "Successfully created articles from search",
+        "code": 200,
+        "result": True,
+        "articles": articles_dict
+    }
+    return response
+
+
+def handle_keywords_generation(user_input: str, language: str):
+    """
+    Handles the generation of keywords based on the user input.
+    """
+    keywords = api_gpt.generate_keywords(user_input, language)
+    response = {
+        "message": "Successfully generated keywords",
+        "code": 200,
+        "result": True,
+        "keywords": keywords
+    }
+    return response
+
+
+def handle_keywords_categorization(keywords: list):
+    """
+    Handles the categorization of keywords.
+    """
+    categories = api_gpt.categorize_keywords(keywords)
+    response = {
+        "message": "Successfully categorized keywords",
+        "code": 200,
+        "result": True,
+        "categories": categories
+    }
+    return response
+

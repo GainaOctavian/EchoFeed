@@ -4,12 +4,11 @@ import fastapi
 import uvicorn
 from fastapi.responses import JSONResponse  # , RedirectResponse
 
-from echofeed.common import config_info
+from echofeed.common import config_info, api_request_classes as api_req_cls
+from echofeed.api import api_endpoint_helpers as api_helpers
 from echofeed.common.config_info import AcceptedOperations as acceptedOps
 from echofeed.common.config_info import Entity
 from echofeed.common.config_info import ElasticsearchIndexes as esIndexes
-from echofeed.api import api_endpoint_helpers as api_helpers
-from echofeed.api import api_request_classes as api_req_cls
 
 app = fastapi.FastAPI(
     title="EchoFeed API",
@@ -141,12 +140,13 @@ async def create_user(request: api_req_cls.CreateUserRequest) -> JSONResponse:
                 user_info(dict):
                     first_name (str): The first name of the user.
                     last_name (str): The last name of the user.
-                    birthday (date): The birthday of the user.
+                    birthday (string): The birthday of the user.
                     location (str): The location of the user.
                     interests(List[str]): The interests of the user.
                     viewed_articles(List[str]): The user's viewed articles.
                     liked_articles(List[str]): The liked articles of the user.
                     is_admin(bool): The admin status of the user.
+                    password(str): The password of the user.
 
         Returns:
             message(str): a message that contains information about
@@ -243,6 +243,116 @@ async def get_all_users() -> JSONResponse:
 
     """
     response = api_helpers.get_all_users()
+    return JSONResponse(response)
+
+
+@app.get(acceptedOps.ROUTES[Entity.USER][acceptedOps.LOGIN],
+         tags=[esIndexes.INDEXES[Entity.USER]])
+async def login(username: str, password: str) -> JSONResponse:
+    """Logs in a user.
+
+        Returns:
+            user_info(dict): The information of the user.
+            message(str): a message that contains information about
+                          the operation.
+            code(int): the result code of the operation.
+            result(bool): the result of the operation.
+
+    """
+    response = api_helpers.login(username, password)
+    return JSONResponse(response)
+
+
+@app.post(acceptedOps.ROUTES[Entity.ARTICLE][acceptedOps.SEARCH], tags=["search"])
+async def search_articles(request: api_req_cls.SearchArticlesRequest) -> JSONResponse:
+    """Searches articles through OpenAI API and Google Search API.
+
+        Args:
+            request (dict):
+                important_keywords(List[str]): The important keywords.
+                relevant_keywords(List[str]): The relevant keywords.
+                irrelevant_keywords(List[str]): The irrelevant keywords.
+                language(str): The language of the articles.
+                min_keywords(int): The minimum number of keywords.
+                num_results(int): The number of results.
+                date(str): The date of the articles.
+
+        Returns:
+            articles_info(dict): The information of the articles.
+            message(str): a message that contains information about
+                          the operation.
+            code(int): the result code of the operation.
+            result(bool): the result of the operation.
+
+    """
+    response = api_helpers.handle_article_search(
+        request.important_keywords, request.relevant_keywords,
+        request.irrelevant_keywords, request.language, request.min_keywords,
+        request.num_results, request.date
+    )
+    return JSONResponse(response)
+
+
+@app.post(acceptedOps.ROUTES[Entity.ARTICLE][acceptedOps.RECOMMENDATION], tags=["recommendation"])
+async def get_recommendation(request: api_req_cls.GetRecommendationsRequest) -> JSONResponse:
+    """Gets recommendations for a user.
+
+        Args:
+            request (dict):
+                keywords(List[str]): The keywords.
+                language(str): The language of the articles.
+                date(str): The date of the articles.
+        Returns:
+            articles_info(dict): The information of the articles.
+            message(str): a message that contains information about
+                          the operation.
+            code(int): the result code of the operation.
+            result(bool): the result of the operation.
+    """
+    response = api_helpers.handle_recommandation_search(
+        request.keywords, request.language, request.date
+    )
+    return JSONResponse(response)
+
+
+@app.get(acceptedOps.ROUTES[Entity.ARTICLE][acceptedOps.KEYWORDS], tags=["keywords"])
+async def generate_keywords(request: api_req_cls.GetKeywordsRequest) -> JSONResponse:
+    """Generates keywords for a user input.
+
+        Args:
+            user_input(str): The user input.
+            language(str): The language of the keywords.
+
+        Returns:
+            keywords(List[str]): The generated keywords.
+            message(str): a message that contains information about
+                          the operation.
+            code(int): the result code of the operation.
+            result(bool): the result of the operation.
+            :param request:
+
+    """
+    response = api_helpers.handle_keywords_generation(request.user_input, request.language)
+    return JSONResponse(response)
+
+
+@app.get(acceptedOps.ROUTES[Entity.ARTICLE][acceptedOps.CATEGORIES], tags=["categories"])
+async def get_categories(request: api_req_cls.GetCategoriesRequest) -> JSONResponse:
+    """Gets categories for a list of keywords.
+
+        Args:
+            keywords(List[str]): The keywords.
+
+        Returns:
+            categories(dict): The categories.
+            message(str): a message that contains information about
+                          the operation.
+            code(int): the result code of the operation.
+            result(bool): the result of the operation.
+            :param request:
+
+    """
+    response = api_helpers.handle_keywords_categorization(request.keywords)
     return JSONResponse(response)
 
 

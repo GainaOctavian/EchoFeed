@@ -1,8 +1,7 @@
 """
 Module containing classes used for the API service
 """
-from datetime import date
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -12,20 +11,22 @@ class Article(BaseModel):
     """
     title: str
     content: str
-    keywords: List[str] = []  # optional?
+    url: str
+    date: str
+    keywords: Optional[List[str]]
 
 
 class User(BaseModel):
     """
     Class that defines user object structure
     """
+    username: str
     last_name: str
     first_name: str
-    birthday: date
+    birthday: str
     location: str
     interests: List[str] = []
-    viewed_articles: List[str] = []  # the list contains either the article
-    # id or the article title
-    liked_articles: List[str] = []  # the list contains either the article
-    # id or the article title
+    viewed_articles: List[str] = []
+    liked_articles: List[str] = []
     is_admin: bool = False
+    password: str

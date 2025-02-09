@@ -1,0 +1,18 @@
+FROM --platform=linux/amd64 python:3.8.11-bullseye
+
+WORKDIR /echofeed
+
+ENV PYTHONPATH="${PYTHONPATH}:/."
+
+COPY echofeed/api/requirements.txt /echofeed/api/requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r api/requirements.txt
+
+COPY echofeed/common ./common
+COPY echofeed/api ./api
+COPY echofeed/tests ./tests
+
+EXPOSE 8080
+
+CMD ["python3", "-m", "pytest", "--disable-warnings"]
+CMD ["python3", "api/api_main.py"]

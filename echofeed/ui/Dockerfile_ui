@@ -1,0 +1,16 @@
+FROM --platform=linux/amd64 python:3.8.11-bullseye
+
+WORKDIR /echofeed
+
+ENV PYTHONPATH="${PYTHONPATH}:/."
+
+COPY echofeed/ui/requirements.txt /echofeed/ui/requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r ui/requirements.txt
+
+COPY echofeed/common ./common
+COPY echofeed/ui ./ui
+
+EXPOSE 8081
+
+CMD ["python3", "ui/ui_main.py"]

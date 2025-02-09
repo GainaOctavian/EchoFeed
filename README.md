@@ -21,7 +21,7 @@ EchoFeed is an intelligent web application designed to personalize news feeds fo
 
 ## System Architecture
 
-The application is based on a microservices architecture, enhancing modularity, scalability, and maintainability.
+The application is based on a modular architecture, enhancing scalability and maintainability.
 
 - **Frontend:** Developed using NiceGUI for dynamic, responsive design.
 - **Backend:** Built with FastAPI, handling API endpoints, user management, and business logic.
@@ -33,7 +33,7 @@ The application is based on a microservices architecture, enhancing modularity, 
 ## Technologies Used
 
 - **Backend:** FastAPI, Python
-- **Frontend:** NiceGUI, HTML5, CSS3, JavaScript
+- **Frontend:** NiceGUI
 - **Database:** Elasticsearch
 - **AI Integration:** OpenAI GPT-4o
 - **API Integration:** Google Search API
@@ -56,7 +56,8 @@ The application is based on a microservices architecture, enhancing modularity, 
 
 3. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
+   pip install -r echofeed/api/requirements.txt
+   pip install -r echofeed/ui/requirements.txt
    ```
 
 4. **Configure environment variables:**
@@ -74,7 +75,11 @@ The application is based on a microservices architecture, enhancing modularity, 
 
 6. **Run the application:**
    ```bash
-   uvicorn app:app --reload
+   # Run API
+   uvicorn echofeed.api.api_main:app --reload
+
+   # Run UI
+   python echofeed/ui/ui_main.py
    ```
 
    The application will be available at `http://localhost:8000`.
@@ -87,7 +92,7 @@ The application is based on a microservices architecture, enhancing modularity, 
 
 ## 🌟 Future Development
 
-- Enhancing recommendation algorithms for improved accuracy.
+- Optimizing recommendation algorithms for improved accuracy.
 - Expanding API integrations to include more news sources.
 - Implementing advanced analytics for tracking user engagement and content performance.
 
